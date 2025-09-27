@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Star, Home, BookOpen, Trophy, Gift, DollarSign, TrendingUp } from 'lucide-react';
 
 type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings';
@@ -10,35 +10,45 @@ interface PointsPageProps {
 }
 
 export default function PointsPage({ activeTab = 'points', onNavigate, onHome }: PointsPageProps) {
-  // Sample points history data
-  const pointsHistory = [
-    {
-      id: 1,
-      type: 'Points',
-      amount: 1000,
-      description: 'Course Completion Bonus',
-      date: '2024-01-15',
-      isPositive: true
-    },
-    {
-      id: 2,
-      type: 'Points',
-      amount: 75,
-      description: 'Task Completion',
-      date: '2024-01-14',
-      isPositive: true
-    },
-    {
-      id: 3,
-      type: 'Points',
-      amount: 100,
-      description: 'Initial Bonus',
-      date: '2024-01-01',
-      isPositive: true
-    }
-  ];
+  const [pointsHistory, setPointsHistory] = useState<any[]>([]);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
-  const totalPoints = pointsHistory.reduce((sum, item) => sum + item.amount, 0);
+  // For now, we'll use a simple points display since we don't have a specific points history endpoint
+  // In a real app, you'd fetch this from an API
+  useEffect(() => {
+    // Simulate loading user's points data
+    const loadPointsData = () => {
+      setIsLoading(true);
+      try {
+        // Get points from localStorage or user context
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+          const user = JSON.parse(userData);
+          setTotalPoints(user.totalPoints || 0);
+        }
+        
+        // Mock points history - in real app, fetch from API
+        setPointsHistory([
+          {
+            id: 1,
+            type: 'Points',
+            amount: 100,
+            description: 'Welcome Bonus',
+            date: new Date().toISOString().split('T')[0],
+            isPositive: true
+          }
+        ]);
+      } catch (e) {
+        setError('Failed to load points data');
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPointsData();
+  }, []);
 
   const formatDate = (isoDate: string) => {
     const d = new Date(isoDate);
@@ -47,6 +57,33 @@ export default function PointsPage({ activeTab = 'points', onNavigate, onHome }:
     const yy = String(d.getFullYear()).slice(-2);
     return `${dd}/${mm}/${yy}`;
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <div className="text-white">Loading points...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+        <div className="text-center">
+          <div className="text-red-400 mb-4">{error}</div>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0C1445] to-[#1E2A78]">

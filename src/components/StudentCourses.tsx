@@ -17,43 +17,22 @@ interface StudentCoursesProps {
   onProfile?: () => void;
 }
 
-const fallbackCourses: Course[] = [
-  {
-    id: 1,
-    title: 'One Crore Unicorn Coach Programme',
-    version: 1,
-    modules: 7,
-    tasks: 43,
-    status: 'Active'
-  },
-  {
-    id: 56,
-    title: 'demo course',
-    version: 3,
-    modules: 6,
-    tasks: 10,
-    status: 'Active'
-  },
-  {
-    id: 53,
-    title: '21 Day AI Challenge',
-    version: 1,
-    modules: 3,
-    tasks: 22,
-    status: 'Active'
-  }
-];
+// Removed dummy data - now fetching from API
 
 export default function StudentCourses({ onLogout, onProfile }: StudentCoursesProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
-  const [courses, setCourses] = useState<Course[]>(fallbackCourses);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string>('');
 
   const loadCourses = async () => {
     setIsRefreshing(true);
+    setError('');
     try {
       const { data } = await fetchMyCourses();
-      // Expecting an array of courses with id, title, modules/tasks counts
+      console.log('Courses API response:', data);
+      
       if (Array.isArray(data) && data.length) {
         const normalized: Course[] = data.map((c: any) => ({
           id: Number(c.id ?? c.course_id ?? c.courseId),
@@ -64,11 +43,16 @@ export default function StudentCourses({ onLogout, onProfile }: StudentCoursesPr
           status: (c.status === 'Archived' ? 'Archived' : 'Active') as Course['status']
         }));
         setCourses(normalized);
+      } else {
+        setCourses([]);
       }
-    } catch (e) {
-      // Keep fallback data on error
+    } catch (e: any) {
+      console.error('Error loading courses:', e);
+      setError(e?.response?.data?.message || 'Failed to load courses');
+      setCourses([]);
     } finally {
       setIsRefreshing(false);
+      setIsLoading(false);
     }
   };
 
@@ -77,7 +61,7 @@ export default function StudentCourses({ onLogout, onProfile }: StudentCoursesPr
   }, []);
 
   if (selectedCourse) {
-    return <CourseDetails courseId={selectedCourse.id} onHome={() => setSelectedCourse(null)} />;
+    return <CourseDetails courseId={selectedCourse.id} onBack={() => setSelectedCourse(null)} />;
   }
 
   const handleRefresh = () => {
@@ -135,15 +119,42 @@ export default function StudentCourses({ onLogout, onProfile }: StudentCoursesPr
       {/* Course Grid */}
       <div className="px-4 sm:px-6 lg:px-8 pb-12">
         <div className="max-w-7xl mx-auto">
-          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            {courses.map((course) => (
-              <CourseCard 
-                key={course.id} 
-                course={course} 
-                onClick={() => setSelectedCourse(course)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin"></div>
+              <span className="ml-3 text-white">Loading courses...</span>
+            </div>
+          ) : error ? (
+            <div className="text-center py-12">
+              <div className="text-red-400 mb-4">{error}</div>
+              <button 
+                onClick={loadCourses}
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+              >
+                Try Again
+              </button>
+            </div>
+          ) : courses.length === 0 ? (
+            <div className="text-center py-12">
+              <div className="text-gray-400 mb-4">No courses found</div>
+              <button 
+                onClick={loadCourses}
+                className="px-4 py-2 bg-cyan-500 text-white rounded-lg hover:bg-cyan-600"
+              >
+                Refresh
+              </button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+              {courses.map((course) => (
+                <CourseCard 
+                  key={course.id} 
+                  course={course} 
+                  onClick={() => setSelectedCourse(course)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

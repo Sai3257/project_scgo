@@ -3,11 +3,10 @@ import api from './client';
 // Auth
 export async function loginWithEmail(email: string) {
   return api.post('/auth/studentlogin', { 
-    email: email,
-    // Add other fields your backend might expect
-    username: email,
-    email_address: email
-  });
+    email: email
+    
+    
+});
 }
 
 export async function validateSession() {
