@@ -36,14 +36,25 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setIsLoading(true);
     try {
       const { data } = await loginWithEmail(email);
-      const redirectUrl = data?.redirect_url || data?.redirect || data?.url || data?.link;
+      console.log('Login response:', data);
+      
+      // Check for redirect URL in response
+      const redirectUrl = data?.redirect_url || data?.redirect || data?.url || data?.link || data?.redirectLink;
       if (redirectUrl) {
         window.location.href = String(redirectUrl);
         return;
       }
+      
+      // If no redirect, show success screen
       setStep('success');
     } catch (err: any) {
-      const message = err?.response?.data?.message || 'Failed to send magic link. Please try again.';
+      console.error('Login error:', err);
+      console.error('Response data:', err?.response?.data);
+      
+      const message = err?.response?.data?.message || 
+                     err?.response?.data?.error || 
+                     err?.message || 
+                     'Failed to send magic link. Please try again.';
       setErrorMessage(message);
     } finally {
       setIsLoading(false);
