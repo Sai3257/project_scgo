@@ -27,8 +27,8 @@ export async function fetchLeaderboard() {
 }
 
 // Tasks
-export async function markTaskAsCompleted(taskId: number) {
-  return api.post('/api/mark_as_completed', { task_id: taskId });
+export async function markTaskAsCompleted(taskId: number, studentId: number, taskTitle: string) {
+  return api.put('/api/mark_as_completed', { task_id: taskId, student_id: studentId, task_title: taskTitle });
 }
 
 // Courses
@@ -37,7 +37,7 @@ export async function fetchMyCourses() {
 }
 
 export async function fetchCourseDetails(courseId: number) {
+  console.log('Fetching course details for ID:', courseId);
   return api.get(`/courses/${courseId}`);
 }
-
 
