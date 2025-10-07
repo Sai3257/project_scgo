@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Mail, ArrowRight, Brain, Target, TrendingUp, BookOpen, CheckCircle } from 'lucide-react';
-import { loginWithEmail } from '../api/endpoints';
+import { loginWithEmail, fetchProfile } from '../api/endpoints';
 
 interface LoginPageProps {
   onLogin: (user: any) => void;
@@ -81,6 +81,33 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
   // Instant visual validation states
   const showInlineEmailWarning = email.length > 0 && !isValidEmail;
+
+  // If user already has a token, backfill student_id into localStorage from profile
+  useEffect(() => {
+    (async () => {
+      try {
+        const token = localStorage.getItem('access_token');
+        const hasStudentId = localStorage.getItem('student_id');
+        if (!token || hasStudentId) return;
+        const { data } = await fetchProfile();
+        const sid = Number(data?.student_profile?.student_id);
+        if (!Number.isNaN(sid) && sid > 0) {
+          localStorage.setItem('student_id', String(sid));
+          // Update consolidated bundle if present
+          try {
+            const existing = localStorage.getItem('auth_session');
+            if (existing) {
+              const parsed = JSON.parse(existing);
+              const updated = { ...parsed, student_id: String(sid) };
+              localStorage.setItem('auth_session', JSON.stringify(updated));
+            }
+          } catch {}
+        }
+      } catch (e) {
+        // Ignore silently on login screen
+      }
+    })();
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#0C1445] to-[#1E2A78] relative overflow-hidden">

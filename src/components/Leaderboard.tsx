@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { fetchLeaderboard } from '../api/endpoints';
-import { Trophy, Medal, Award, Crown, Home } from 'lucide-react';
+import { Trophy, Home, Star, BookOpen, TrendingUp, Gift, DollarSign, Crown, Medal, Award } from 'lucide-react';
 
 interface Student {
   id: number;
@@ -17,41 +18,88 @@ interface Student {
   avatar: string;
 }
 
-type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings';
+type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'rewards';
 
 interface LeaderboardProps {
-  onBack: () => void;
   onNavigate?: (tab: NavigationTab) => void;
+  courseId?: number;
+  activeTab?: NavigationTab;
 }
 
-export default function Leaderboard({ onBack, onNavigate }: LeaderboardProps) {
+export default function Leaderboard({ onNavigate, courseId, activeTab = 'rankings' }: LeaderboardProps) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const [currentPeriod, setCurrentPeriod] = useState<'thisMonth' | 'previousMonth'>('thisMonth');
+  
+  // Get courseId from props or from URL state
+  const currentCourseId = courseId || location.state?.courseId || 57; // Default to 57 if not provided
+
+  // Helper functions for date formatting
+  const formatDateToYYYYMM = (date: Date): string => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    return `${year}-${month}`;
+  };
+
+  const getCurrentMonthDate = (): string => {
+    return formatDateToYYYYMM(new Date());
+  };
+
+  const getPreviousMonthDate = (): string => {
+    const now = new Date();
+    const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+    return formatDateToYYYYMM(previousMonth);
+  };
+
+  const getMonthDateForPeriod = (period: 'thisMonth' | 'previousMonth'): string | null => {
+    switch (period) {
+      case 'thisMonth':
+        return getCurrentMonthDate();
+      case 'previousMonth':
+        return getPreviousMonthDate();
+      default:
+        return null;
+    }
+  };
 
   const loadLeaderboard = async () => {
     setIsLoading(true);
     setError('');
     try {
-      const { data } = await fetchLeaderboard();
+      if (!currentCourseId) {
+        throw new Error('Course ID is required for leaderboard');
+      }
+      
+      const monthDate = getMonthDateForPeriod(currentPeriod);
+      console.log('Fetching leaderboard for course ID:', currentCourseId, 'with month_date:', monthDate);
+      const { data } = await fetchLeaderboard(currentCourseId, monthDate);
       console.log('Leaderboard API response:', data);
       
+      // Handle the new API response format with leaderboard array
+      const leaderboardData = data?.leaderboard || data || [];
+      const totalStudents = data?.total_students || leaderboardData.length;
+      
       // Transform API response to match our Student interface
-      const transformedStudents: Student[] = Array.isArray(data) ? data.map((student: any, index: number) => ({
-        id: student.id || index + 1,
-        name: student.name || student.full_name || 'Student',
-        initials: student.initials || (student.name || 'S').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
-        rank: student.rank || index + 1,
-        completed: student.completed_tasks || student.tasks_completed || 0,
-        streak: student.streak || 0,
-        points: student.points || student.total_points || 0,
-        pointsThisMonth: student.points_this_month || 0,
-        totalPoints: student.total_points || student.points || 0,
-        rewardsUnlocked: student.rewards_unlocked || 0,
-        rewardsValue: student.rewards_value || 0,
-        avatar: student.avatar || `bg-${['blue', 'green', 'purple', 'pink', 'indigo', 'teal', 'orange', 'red', 'gray', 'slate'][index % 10]}-500`
+      const transformedStudents: Student[] = Array.isArray(leaderboardData) ? leaderboardData.map((student: any) => ({
+        id: student.student_id || student.id || 0,
+        name: student.student_name || student.name || 'Student',
+        initials: (student.student_name || student.name || 'S').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+        rank: student.rank || 0,
+        completed: student.tasks_completed || 0,
+        streak: 0, // Not provided in API response
+        points: student.monthly_points || 0, // This month points
+        pointsThisMonth: student.monthly_points || 0, // This month points
+        totalPoints: student.reward_points || 0, // Total points
+        rewardsUnlocked: student.value_unlocked > 0 ? 1 : 0, // Show 1 if value_unlocked > 0, else 0
+        rewardsValue: student.value_unlocked || 0, // Rewards value
+        avatar: `bg-${['blue', 'green', 'purple', 'pink', 'indigo', 'teal', 'orange', 'red', 'gray', 'slate'][student.rank % 10]}-500`
       })) : [];
       
+      console.log('Transformed students:', transformedStudents);
+      console.log('Total students:', totalStudents);
       setStudents(transformedStudents);
     } catch (e: any) {
       console.error('Error loading leaderboard:', e);
@@ -62,38 +110,16 @@ export default function Leaderboard({ onBack, onNavigate }: LeaderboardProps) {
   };
 
   useEffect(() => {
-    loadLeaderboard();
-  }, []);
-
-  const getRankIcon = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return <Crown className="w-6 h-6 text-yellow-400" />;
-      case 2:
-        return <Medal className="w-6 h-6 text-gray-400" />;
-      case 3:
-        return <Award className="w-6 h-6 text-amber-600" />;
-      default:
-        return <span className="text-lg font-bold text-gray-400">#{rank}</span>;
+    if (currentCourseId) {
+      loadLeaderboard();
     }
-  };
+  }, [currentCourseId, currentPeriod]);
 
-  const getRankColor = (rank: number) => {
-    switch (rank) {
-      case 1:
-        return 'bg-gradient-to-r from-yellow-400 to-yellow-600 text-black';
-      case 2:
-        return 'bg-gradient-to-r from-gray-300 to-gray-500 text-black';
-      case 3:
-        return 'bg-gradient-to-r from-amber-500 to-amber-700 text-white';
-      default:
-        return 'bg-white/10 text-white';
-    }
-  };
+  // Minimal, chart-like layout — no icons/medals/avatars
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#0C1445] to-[#1E2A78] flex items-center justify-center">
         <div className="text-center">
           <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
           <div className="text-white">Loading leaderboard...</div>
@@ -104,7 +130,7 @@ export default function Leaderboard({ onBack, onNavigate }: LeaderboardProps) {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-[#0C1445] to-[#1E2A78] flex items-center justify-center">
         <div className="text-center">
           <div className="text-red-400 mb-4">{error}</div>
           <button 
@@ -119,38 +145,21 @@ export default function Leaderboard({ onBack, onNavigate }: LeaderboardProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+    <div className="min-h-screen bg-gradient-to-br from-[#0C1445] to-[#1E2A78]">
       {/* Header */}
       <div className="bg-black/20 backdrop-blur-sm border-b border-white/10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={onBack}
-                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-              >
-                <Home className="w-5 h-5 text-white" />
-              </button>
-              <div>
-                <h1 className="text-xl font-bold text-white">Leaderboard</h1>
-                <p className="text-sm text-gray-300">Top performers this month</p>
-              </div>
-           </div>
-            <div className="flex items-center space-x-2">
-            <button
-                onClick={() => onNavigate?.('points')}
-                className="flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all"
-            >
-              <Trophy className="w-4 h-4" />
-                <span>Points</span>
-            </button>
-          </div>
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="flex items-center justify-between h-12 sm:h-16">
+            <div>
+              <h1 className="text-lg sm:text-xl font-bold text-white">Leaderboard</h1>
+              <p className="text-xs sm:text-sm text-gray-300">Top performers this month</p>
+            </div>
                   </div>
                 </div>
               </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-4 sm:py-8 pb-16 sm:pb-20">
         {students.length === 0 ? (
           <div className="text-center py-12">
             <Trophy className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -164,98 +173,242 @@ export default function Leaderboard({ onBack, onNavigate }: LeaderboardProps) {
             </button>
           </div>
         ) : (
-          <div className="space-y-6">
-            {/* Top 3 Podium */}
-            {students.length >= 3 && (
-              <div className="flex justify-center items-end space-x-4 mb-8">
-                {/* 2nd Place */}
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-gradient-to-r from-gray-300 to-gray-500 rounded-full flex items-center justify-center mb-2">
-                    <Medal className="w-8 h-8 text-black" />
-                  </div>
-                  <div className="text-white font-semibold">{students[1]?.name}</div>
-                  <div className="text-gray-300 text-sm">{students[1]?.points} pts</div>
-                     </div>
+          <div className="space-y-4 sm:space-y-6">
+            {/* Tabbed Navigation */}
+            <div className="flex flex-row justify-center gap-2 sm:gap-3 md:gap-4 mb-6 sm:mb-8">
+              <button
+                onClick={() => setCurrentPeriod('thisMonth')}
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 ${
+                  currentPeriod === 'thisMonth'
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 transform scale-105'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white border border-white/20'
+                }`}
+              >
+                This Month Leaderboard
+              </button>
+              <button
+                onClick={() => setCurrentPeriod('previousMonth')}
+                className={`px-4 sm:px-6 py-2 sm:py-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-300 ${
+                  currentPeriod === 'previousMonth'
+                    ? 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30 transform scale-105'
+                    : 'bg-white/10 text-gray-300 hover:bg-white/20 hover:text-white border border-white/20'
+                }`}
+              >
+                Previous Month Leaderboard
+              </button>
+            </div>
 
-                {/* 1st Place */}
-                <div className="text-center">
-                  <div className="w-24 h-24 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-full flex items-center justify-center mb-2">
-                    <Crown className="w-10 h-10 text-black" />
-                  </div>
-                  <div className="text-white font-bold text-lg">{students[0]?.name}</div>
-                  <div className="text-gray-300">{students[0]?.points} pts</div>
-                     </div>
+            {/* Modern Leaderboard */}
+            <div className="bg-white/10 backdrop-blur-sm rounded-xl sm:rounded-2xl border border-white/20 overflow-hidden shadow-2xl">
+              <div className="p-4 sm:p-6 border-b border-white/10 bg-gradient-to-r from-purple-500/20 to-blue-500/20">
+                <h2 className="text-lg sm:text-2xl font-bold text-white">
+                  {currentPeriod === 'thisMonth' ? 'This Month Rankings' : 'Previous Month Rankings'}
+                </h2>
+                <p className="text-gray-300 text-xs sm:text-sm mt-1">Complete tasks to climb the leaderboard</p>
+            </div>
 
-                {/* 3rd Place */}
-                <div className="text-center">
-                  <div className="w-20 h-20 bg-gradient-to-r from-amber-500 to-amber-700 rounded-full flex items-center justify-center mb-2">
-                    <Award className="w-8 h-8 text-white" />
-                  </div>
-                  <div className="text-white font-semibold">{students[2]?.name}</div>
-                  <div className="text-gray-300 text-sm">{students[2]?.points} pts</div>
+            {/* Mobile Headers */}
+            <div className="md:hidden grid grid-cols-5 px-3 sm:px-4 py-2 bg-white/5 border-b border-white/10">
+              <div className="text-left text-xs text-gray-400 font-medium">Rankings</div>
+              <div className="text-center text-xs text-gray-400 font-medium">
+                {currentPeriod === 'thisMonth' ? 'This Month Points' : 'Previous Month Points'}
+              </div>
+              <div className="text-center text-xs text-gray-400 font-medium">Total Points</div>
+              <div className="text-center text-xs text-gray-400 font-medium">Rewards Unlocked</div>
+              <div className="text-center text-xs text-gray-400 font-medium">Rewards Value</div>
+              
+            </div>
+
+            {/* Desktop Headers */}
+            <div className="hidden md:grid md:grid-cols-5 px-4 sm:px-6 py-3 sm:py-4 bg-white/5 border-b border-white/10">
+                <div className="flex items-center gap-3">
+                  <Trophy className="w-5 h-5 text-yellow-400" />
+                  <span className="font-semibold text-white">Rankings</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-green-400" />
+                  <span className="font-medium text-white">
+                    {currentPeriod === 'thisMonth' ? 'This Month Points' : 'Previous Month Points'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Star className="w-4 h-4 text-blue-400" />
+                  <span className="font-medium text-white">Total Points</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <Gift className="w-4 h-4 text-purple-400" />
+                  <span className="font-medium text-white">Rewards Unlocked</span>
+                </div>
+                <div className="flex items-center justify-center gap-2">
+                  <DollarSign className="w-4 h-4 text-emerald-400" />
+                  <span className="font-medium text-white">Rewards Value</span>
                 </div>
               </div>
-            )}
 
-            {/* Full Leaderboard */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 overflow-hidden">
-              <div className="p-6 border-b border-white/10">
-                <h2 className="text-xl font-bold text-white">Full Rankings</h2>
-                <p className="text-gray-300 text-sm">Complete tasks to climb the leaderboard</p>
-                     </div>
+              {/* Leaderboard Cards */}
+              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
+                {students.map((student, index) => {
+                  const rank = index + 1;
 
-              <div className="divide-y divide-white/10">
-                {students.map((student) => (
-                  <div key={student.id} className="p-6 hover:bg-white/5 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center space-x-4">
-                        <div className={`w-12 h-12 rounded-full flex items-center justify-center ${getRankColor(student.rank)}`}>
-                          {getRankIcon(student.rank)}
-                        </div>
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <h3 className="font-semibold text-white">{student.name}</h3>
-                            {student.rank <= 3 && (
-                              <span className="px-2 py-1 bg-gradient-to-r from-yellow-500 to-orange-500 text-black text-xs font-bold rounded-full">
-                                TOP {student.rank}
-                              </span>
-                            )}
-                          </div>
-                          <p className="text-sm text-gray-400">{student.completed} tasks completed</p>
-                        </div>
-                      </div>
+                  const getRankIcon = () => {
+                    switch (rank) {
+                      case 1:
+                        return <Crown className="w-5 h-5 text-yellow-400" />;
+                      case 2:
+                        return <Medal className="w-5 h-5 text-gray-300" />;
+                      case 3:
+                        return <Award className="w-5 h-5 text-amber-600" />;
+                      default:
+                        return <span className="text-xs font-bold text-gray-400">#{rank}</span>;
+                    }
+                  };
 
-                      <div className="text-right">
-                        <div className="text-2xl font-bold text-white">{student.points.toLocaleString()}</div>
-                        <div className="text-sm text-gray-400">points</div>
-                        </div>
-                      </div>
 
-                    <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div className="text-center">
-                        <div className="text-gray-400">Streak</div>
-                        <div className="font-semibold text-white">{student.streak} days</div>
+                  return (
+                    <div
+                      key={student.id}
+                      className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10 p-3 sm:p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-white/20"
+                    >
+                       {/* Mobile Layout */}
+                       <div className="md:hidden grid grid-cols-5 items-center gap-2 sm:gap-4">
+                         <div className="flex items-center gap-1 sm:gap-2">
+                           {getRankIcon()}
+                           <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{student.name}</h3>
+                         </div>
+                         <div className="text-center">
+                           <span className="font-semibold text-white text-xs sm:text-sm">{student.pointsThisMonth}</span>
+                         </div>
+                         <div className="text-center">
+                           <span className="font-semibold text-white text-xs sm:text-sm">{student.totalPoints.toLocaleString()}</span>
+                         </div>
+                         <div className="text-center">
+                           <span className="font-semibold text-white text-xs sm:text-sm">{student.rewardsUnlocked}</span>
+                         </div>
+                         <div className="text-center">
+                           <span className="font-semibold text-white text-xs sm:text-sm">${student.rewardsValue}</span>
+                         </div>
+                       </div>
+
+                      {/* Desktop Layout */}
+                      <div className="hidden md:grid md:grid-cols-5 items-center gap-3 sm:gap-4">
+                        <div className="flex items-center gap-2 sm:gap-3">
+                          {getRankIcon()}
+                          <h3 className="font-semibold text-white text-sm sm:text-base">{student.name}</h3>
                         </div>
-                      <div className="text-center">
-                        <div className="text-gray-400">This Month</div>
-                        <div className="font-semibold text-cyan-400">{student.pointsThisMonth} pts</div>
-                      </div>
-                      <div className="text-center">
-                        <div className="text-gray-400">Rewards</div>
-                        <div className="font-semibold text-purple-400">{student.rewardsUnlocked}</div>
+                        <div className="text-center">
+                          <span className="font-semibold text-white text-sm sm:text-base">{student.pointsThisMonth}</span>
                         </div>
-                      <div className="text-center">
-                        <div className="text-gray-400">Value</div>
-                        <div className="font-semibold text-green-400">${student.rewardsValue}</div>
+                        <div className="text-center">
+                          <span className="font-semibold text-white text-sm sm:text-base">{student.totalPoints.toLocaleString()}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-semibold text-white text-sm sm:text-base">{student.rewardsUnlocked}</span>
+                        </div>
+                        <div className="text-center">
+                          <span className="font-semibold text-white text-sm sm:text-base">${student.rewardsValue}</span>
+                        </div>
                       </div>
                     </div>
-                   </div>
-                ))}
-               </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         )}
        </div>
+
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-black/20 backdrop-blur-sm border-t border-white/10 z-50">
+        <div className="max-w-7xl mx-auto px-3 sm:px-4 py-2 sm:py-3">
+          <div className="flex items-center justify-center gap-4 sm:gap-6 lg:gap-8">
+            {/* Home */}
+            <button
+              onClick={() => onNavigate?.('home')}
+              className={`flex flex-col items-center space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'home'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Home className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'home' ? 'w-5 h-5 sm:w-6 sm:h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-4 h-4 sm:w-5 sm:h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'home' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Home</span>
+            </button>
+
+            {/* Tasks */}
+            <button
+              onClick={() => navigate(`/course/${currentCourseId}`)}
+              className={`flex flex-col items-center space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'tasks'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <BookOpen className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'tasks' ? 'w-5 h-5 sm:w-6 sm:h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-4 h-4 sm:w-5 sm:h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'tasks' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Tasks</span>
+            </button>
+
+            {/* Points */}
+            <button
+              onClick={() => onNavigate?.('points')}
+              className={`flex flex-col items-center space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'points'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Trophy className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'points' ? 'w-5 h-5 sm:w-6 sm:h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-4 h-4 sm:w-5 sm:h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'points' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Points</span>
+            </button>
+
+            {/* Rankings - Currently Active */}
+            <button
+              onClick={() => onNavigate?.('rankings')}
+              className={`flex flex-col items-center space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'rankings'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Star className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'rankings' ? 'w-5 h-5 sm:w-6 sm:h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-4 h-4 sm:w-5 sm:h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'rankings' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Rankings</span>
+            </button>
+
+            {/* Rewards */}
+            <button
+              onClick={() => onNavigate?.('rewards')}
+              className={`flex flex-col items-center space-y-0.5 sm:space-y-1 px-2 sm:px-3 py-1.5 sm:py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Gift className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards' ? 'w-5 h-5 sm:w-6 sm:h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-4 h-4 sm:w-5 sm:h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Rewards</span>
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
+

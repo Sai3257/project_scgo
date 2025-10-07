@@ -346,6 +346,11 @@ export default function StudentCourses({ }: StudentCoursesProps) {
       console.error('Invalid course ID:', courseId);
       return;
     }
+    
+    // Store the current course ID in localStorage for navigation from other pages
+    localStorage.setItem('currentCourseId', courseId.toString());
+    console.log('Stored current course ID in localStorage:', courseId);
+    
     // Pass course title as state to the course details page
     navigate(`/course/${courseId}`, { state: { courseTitle } });
   };
@@ -386,7 +391,7 @@ export default function StudentCourses({ }: StudentCoursesProps) {
                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                 <span className="hidden sm:inline">Refresh</span>
               </button>
-              <button
+                <button
                 onClick={() => {
                   // Clear stored tokens
                   localStorage.removeItem('access_token');
@@ -394,11 +399,11 @@ export default function StudentCourses({ }: StudentCoursesProps) {
                   // Reload page to go back to login
                   window.location.reload();
                 }}
-                className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
-              >
-                <LogOut className="w-4 h-4" />
-                <span className="hidden sm:inline">Logout</span>
-              </button>
+                  className="flex items-center gap-2 px-4 py-2 text-white hover:bg-white/10 rounded-lg transition-colors duration-200"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span className="hidden sm:inline">Logout</span>
+                </button>
             </div>
           </div>
 
@@ -434,15 +439,15 @@ export default function StudentCourses({ }: StudentCoursesProps) {
               </button>
             </div>
           ) : (
-                  <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                     {courses.map((course, index) => (
-                      <CourseCard
+              <CourseCard 
                         key={`course-${course.id}-${index}`}
-                        course={course}
+                course={course} 
                         onClick={() => handleCourseClick(course.id, course.title)}
-                      />
-                    ))}
-                  </div>
+              />
+            ))}
+          </div>
           )}
         </div>
       </div>

@@ -1,16 +1,16 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import StudentCourses from './components/StudentCourses';
-import ModulesPage from './components/ModulesPage';
 import LoginPage from './components/LoginPage';
 import ProfilePage from './components/ProfilePage';
 import Leaderboard from './components/Leaderboard';
 import PointsPage from './components/PointsPage';
+import RewardsPage from './components/RewardsPage';
 import CourseDetails from './components/CourseDetails';
 import { logout } from './api/endpoints';
 // Removed unused icon imports
 
-type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'profile';
+type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'profile' | 'rewards';
 
 // Main App Layout Component
 function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
@@ -24,13 +24,18 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
         navigate('/mycourses');
         break;
       case 'tasks':
-        navigate('/modules');
+        // Get the current course ID from localStorage or default to course 57
+        const currentCourseId = localStorage.getItem('currentCourseId') || '57';
+        navigate(`/course/${currentCourseId}`);
         break;
       case 'points':
         navigate('/points');
         break;
       case 'rankings':
         navigate('/leaderboard');
+        break;
+      case 'rewards':
+        navigate('/rewards');
         break;
       case 'profile':
         navigate('/profile');
@@ -47,10 +52,11 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
         <Routes>
           <Route path="/" element={<StudentCourses />} />
           <Route path="/mycourses" element={<StudentCourses />} />
-          <Route path="/modules" element={<ModulesPage />} />
-          <Route path="/tasks" element={<ModulesPage />} />
+          <Route path="/modules" element={<StudentCourses />} />
+          <Route path="/tasks" element={<StudentCourses />} />
           <Route path="/points" element={<PointsPage onHome={() => navigate('/mycourses')} onNavigate={(tab) => handleNavigation(tab as NavigationTab)} />} />
-          <Route path="/leaderboard" element={<Leaderboard onBack={() => navigate('/mycourses')} onNavigate={(tab) => handleNavigation(tab as NavigationTab)} />} />
+          <Route path="/leaderboard" element={<Leaderboard onNavigate={(tab) => handleNavigation(tab as NavigationTab)} activeTab="rankings" />} />
+          <Route path="/rewards" element={<RewardsPage onNavigate={(tab) => handleNavigation(tab as NavigationTab)} activeTab="rewards" />} />
           <Route path="/profile" element={<ProfilePage user={user} onBack={() => navigate('/mycourses')} onLogout={onLogout} />} />
           <Route path="/course/:courseId" element={<CourseDetailsWrapper />} />
         </Routes>
@@ -64,7 +70,7 @@ function CourseDetailsWrapper() {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // Extract course ID from URL and validate it
+ 
   const courseIdString = location.pathname.split('/course/')[1];
   const courseId = courseIdString ? parseInt(courseIdString, 10) : 1;
   
