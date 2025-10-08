@@ -1,12 +1,12 @@
 import { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fetchCourseDetails, markTaskAsCompleted } from '../api/endpoints';
-import { CheckCircle, Clock, AlertTriangle, Target, BookOpen, Trophy, Home, Star, ChevronDown, Play, X, ExternalLink } from 'lucide-react';
+import { CheckCircle, Clock, AlertTriangle, Target, BookOpen, Trophy, Home, Star, ChevronDown, Play, X, ExternalLink, Gift } from 'lucide-react';
 import Leaderboard from './Leaderboard';
 import PointsPage from './PointsPage';
 
 type FilterType = 'all' | 'completed' | 'pending' | 'upcoming';
-type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings';
+type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'rewards';
 
 interface Task {
   id: number;
@@ -544,6 +544,10 @@ export default function CourseDetails({ courseId, courseTitle, onBack }: { cours
         setActiveTab('rankings');
         navigate('/leaderboard');
         break;
+      case 'rewards':
+        setActiveTab('rewards');
+        navigate('/rewards');
+        break;
     }
   };
 
@@ -958,6 +962,22 @@ export default function CourseDetails({ courseId, courseTitle, onBack }: { cours
               <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
                 activeTab === 'rankings' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
               }`}>Rankings</span>
+            </button>
+            
+            <button
+              onClick={() => handleNavigation('rewards')}
+              className={`flex flex-col items-center space-y-1 px-3 py-2 rounded-xl transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards'
+                  ? 'text-cyan-300 bg-cyan-500/10 shadow-lg shadow-cyan-500/30 transform scale-105'
+                  : 'text-gray-500 hover:text-gray-300 hover:bg-white/5'
+              }`}
+            >
+              <Gift className={`transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards' ? 'w-6 h-6 drop-shadow-lg drop-shadow-cyan-500/50' : 'w-5 h-5'
+              }`} />
+              <span className={`text-xs font-medium transition-all duration-300 ease-in-out ${
+                activeTab === 'rewards' ? 'font-bold drop-shadow-md drop-shadow-cyan-500/40' : 'font-normal'
+              }`}>Rewards</span>
             </button>
             </div>
           </div>

@@ -208,15 +208,14 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
             </div>
 
             {/* Mobile Headers */}
-            <div className="md:hidden grid grid-cols-5 px-3 sm:px-4 py-2 bg-white/5 border-b border-white/10">
-              <div className="text-left text-xs text-gray-400 font-medium">Rankings</div>
-              <div className="text-center text-xs text-gray-400 font-medium">
-                {currentPeriod === 'thisMonth' ? 'This Month Points' : 'Previous Month Points'}
+            <div className="md:hidden grid grid-cols-5 px-2 sm:px-4 py-2 bg-white/5 border-b border-white/10">
+              <div className="text-left text-[10px] sm:text-xs text-gray-400 font-medium">Rankings</div>
+              <div className="text-center text-[10px] sm:text-xs text-gray-400 font-medium">
+                {currentPeriod === 'thisMonth' ? 'Month Points' : 'Prev Points'}
               </div>
-              <div className="text-center text-xs text-gray-400 font-medium">Total Points</div>
-              <div className="text-center text-xs text-gray-400 font-medium">Rewards Unlocked</div>
-              <div className="text-center text-xs text-gray-400 font-medium">Rewards Value</div>
-              
+              <div className="text-center text-[10px] sm:text-xs text-gray-400 font-medium"> CurrentTotal</div>
+              <div className="text-center text-[10px] sm:text-xs text-gray-400 font-medium">RewardsCount</div>
+              <div className="text-center text-[10px] sm:text-xs text-gray-400 font-medium">RewardsValue</div>
             </div>
 
             {/* Desktop Headers */}
@@ -233,7 +232,7 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <Star className="w-4 h-4 text-blue-400" />
-                  <span className="font-medium text-white">Total Points</span>
+                  <span className="font-medium text-white">Current Total</span>
                 </div>
                 <div className="flex items-center justify-center gap-2">
                   <Gift className="w-4 h-4 text-purple-400" />
@@ -246,7 +245,7 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
               </div>
 
               {/* Leaderboard Cards */}
-              <div className="space-y-2 sm:space-y-3 p-3 sm:p-4">
+              <div className="space-y-1 sm:space-y-3 p-2 sm:p-4">
                 {students.map((student, index) => {
                   const rank = index + 1;
 
@@ -267,25 +266,25 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
                   return (
                     <div
                       key={student.id}
-                      className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10 p-3 sm:p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-white/20"
+                      className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10 p-2 sm:p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-white/20"
                     >
                        {/* Mobile Layout */}
-                       <div className="md:hidden grid grid-cols-5 items-center gap-2 sm:gap-4">
-                         <div className="flex items-center gap-1 sm:gap-2">
+                       <div className="md:hidden grid grid-cols-5 items-center gap-1 sm:gap-2">
+                         <div className="flex items-center gap-1">
                            {getRankIcon()}
-                           <h3 className="font-semibold text-white text-xs sm:text-sm truncate">{student.name}</h3>
+                           <h3 className="font-semibold text-white text-[10px] sm:text-xs break-words leading-tight">{student.name}</h3>
                          </div>
                          <div className="text-center">
-                           <span className="font-semibold text-white text-xs sm:text-sm">{student.pointsThisMonth}</span>
+                           <span className="font-semibold text-white text-[10px] sm:text-xs">{student.pointsThisMonth}</span>
                          </div>
                          <div className="text-center">
-                           <span className="font-semibold text-white text-xs sm:text-sm">{student.totalPoints.toLocaleString()}</span>
+                           <span className="font-semibold text-white text-[10px] sm:text-xs">{student.totalPoints.toLocaleString()}</span>
                          </div>
                          <div className="text-center">
-                           <span className="font-semibold text-white text-xs sm:text-sm">{student.rewardsUnlocked}</span>
+                           <span className="font-semibold text-white text-[10px] sm:text-xs">{student.rewardsUnlocked}</span>
                          </div>
                          <div className="text-center">
-                           <span className="font-semibold text-white text-xs sm:text-sm">${student.rewardsValue}</span>
+                           <span className="font-semibold text-white text-[10px] sm:text-xs">${student.rewardsValue}</span>
                          </div>
                        </div>
 

@@ -2,18 +2,16 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import StudentCourses from './components/StudentCourses';
 import LoginPage from './components/LoginPage';
-import ProfilePage from './components/ProfilePage';
 import Leaderboard from './components/Leaderboard';
 import PointsPage from './components/PointsPage';
 import RewardsPage from './components/RewardsPage';
 import CourseDetails from './components/CourseDetails';
-import { logout } from './api/endpoints';
 // Removed unused icon imports
 
-type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'profile' | 'rewards';
+type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'rewards';
 
 // Main App Layout Component
-function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
+function AppLayout() {
   const navigate = useNavigate();
 
   // Navigation handling
@@ -37,9 +35,6 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
       case 'rewards':
         navigate('/rewards');
         break;
-      case 'profile':
-        navigate('/profile');
-        break;
     }
   };
 
@@ -57,7 +52,6 @@ function AppLayout({ user, onLogout }: { user: any; onLogout: () => void }) {
           <Route path="/points" element={<PointsPage onHome={() => navigate('/mycourses')} onNavigate={(tab) => handleNavigation(tab as NavigationTab)} />} />
           <Route path="/leaderboard" element={<Leaderboard onNavigate={(tab) => handleNavigation(tab as NavigationTab)} activeTab="rankings" />} />
           <Route path="/rewards" element={<RewardsPage onNavigate={(tab) => handleNavigation(tab as NavigationTab)} activeTab="rewards" />} />
-          <Route path="/profile" element={<ProfilePage user={user} onBack={() => navigate('/mycourses')} onLogout={onLogout} />} />
           <Route path="/course/:courseId" element={<CourseDetailsWrapper />} />
         </Routes>
       </div>
@@ -95,7 +89,6 @@ function CourseDetailsWrapper() {
 
 function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [user, setUser] = useState<any>(null);
 
   // Handle magic link authentication on mount
   useEffect(() => {
@@ -124,7 +117,6 @@ function App() {
           localStorage.setItem('access_token', accessToken);
           localStorage.setItem('user_data', JSON.stringify(userData));
           
-          setUser(userData);
           setIsLoggedIn(true);
           
           // Clear the hash from URL
@@ -146,7 +138,6 @@ function App() {
         const userData = JSON.parse(existingUser);
         // Check if token is still valid (basic check)
         if (userData.expiresAt && userData.expiresAt > Date.now() / 1000) {
-          setUser(userData);
           setIsLoggedIn(true);
         } else {
           // Token expired, clear storage
@@ -161,32 +152,10 @@ function App() {
     }
   }, []);
 
-  const handleLogin = (userData: any) => {
-    // Enhance user data with profile information
-    const enhancedUser = {
-      ...userData,
-      initials: userData.name.split(' ').map((n: string) => n[0]).join(''),
-      membershipLevel: 'Gold' as const,
-      totalPoints: 2340,
-      pointsThisMonth: 500,
-      rewardsUnlocked: 8,
-      coursesCompleted: 2,
-      joinDate: '2024-01-01'
-    };
-    setUser(enhancedUser);
+  const handleLogin = () => {
     setIsLoggedIn(true);
   };
 
-  const handleLogout = async () => {
-    try { await logout(); } catch {}
-    
-    // Clear stored tokens
-    localStorage.removeItem('access_token');
-    localStorage.removeItem('user_data');
-    
-    setUser(null);
-    setIsLoggedIn(false);
-  };
 
   if (!isLoggedIn) {
     return <LoginPage onLogin={handleLogin} />;
@@ -194,7 +163,7 @@ function App() {
 
   return (
     <Router>
-      <AppLayout user={user} onLogout={handleLogout} />
+      <AppLayout />
     </Router>
   );
 }

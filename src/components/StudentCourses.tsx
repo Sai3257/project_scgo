@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { RefreshCw, Book, CheckCircle, FileText, LogOut, User } from 'lucide-react';
+import { RefreshCw, Book, CheckCircle, FileText, LogOut } from 'lucide-react';
 import { fetchMyCourses, fetchCourseDetails } from '../api/endpoints';
 
 interface Course {
@@ -14,7 +14,6 @@ interface Course {
 
 interface StudentCoursesProps {
   onLogout?: () => void;
-  onProfile?: () => void;
 }
 
 // Removed dummy data - now fetching from API
@@ -375,14 +374,6 @@ export default function StudentCourses({ }: StudentCoursesProps) {
             </div>
             
             <div className="flex items-center gap-3">
-              <button
-                onClick={() => navigate('/profile')}
-                className="w-9 h-9 rounded-full bg-cyan-600 flex items-center justify-center ring-1 ring-white/20 hover:ring-white/30 transition"
-                aria-label="Open profile"
-                title="Profile"
-              >
-                <User className="w-4 h-4 text-white" />
-              </button>
               <button
                 onClick={handleRefresh}
                 disabled={isRefreshing}

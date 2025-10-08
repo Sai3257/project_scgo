@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { fetchRewards } from '../api/endpoints';
-import { Gift, Lock, Home, BookOpen, Star, Trophy, Award } from 'lucide-react';
+import { Gift, Lock, Home, BookOpen, Star, Trophy } from 'lucide-react';
 
 type NavigationTab = 'home' | 'tasks' | 'points' | 'rankings' | 'rewards';
 
@@ -162,22 +162,6 @@ export default function RewardsPage({ onNavigate, courseId = 57, activeTab = 're
                     <p className="text-lg font-bold text-green-400">$49</p>
                   </div>
 
-                  <div>
-                    <p className="text-sm font-medium text-gray-300 mb-1">Status:</p>
-                    <div className="flex items-center gap-2">
-                      {reward.is_unlocked ? (
-                        <>
-                          <Award className="w-4 h-4 text-green-400" />
-                          <span className="text-sm font-medium text-green-400">Unlocked</span>
-                        </>
-                      ) : (
-                        <>
-                          <Lock className="w-4 h-4 text-gray-400" />
-                          <span className="text-sm font-medium text-gray-400">Locked</span>
-                        </>
-                      )}
-                    </div>
-                  </div>
 
                   {reward.earned_at && (
                     <div>
@@ -203,7 +187,7 @@ export default function RewardsPage({ onNavigate, courseId = 57, activeTab = 're
                       className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-lg hover:from-cyan-600 hover:to-blue-600 transition-all font-medium text-sm"
                     >
                       <Gift className="w-4 h-4" />
-                      Claim Reward
+                      Watch Reward
                     </a>
                   </div>
                 )}
