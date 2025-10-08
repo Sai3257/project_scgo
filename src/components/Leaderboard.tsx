@@ -30,6 +30,7 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
   const location = useLocation();
   const navigate = useNavigate();
   const [students, setStudents] = useState<Student[]>([]);
+  const [currentUser, setCurrentUser] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [currentPeriod, setCurrentPeriod] = useState<'thisMonth' | 'previousMonth'>('thisMonth');
@@ -98,9 +99,43 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
         avatar: `bg-${['blue', 'green', 'purple', 'pink', 'indigo', 'teal', 'orange', 'red', 'gray', 'slate'][student.rank % 10]}-500`
       })) : [];
       
-      console.log('Transformed students:', transformedStudents);
+      // Sort by monthly points (descending) and get top 10
+      const sortedStudents = transformedStudents.sort((a, b) => b.pointsThisMonth - a.pointsThisMonth);
+      const top10Students = sortedStudents.slice(0, 10);
+      
+      // Get current user from localStorage
+      const currentUserData = localStorage.getItem('user_data');
+      let currentUserStudent: Student | null = null;
+      
+      if (currentUserData) {
+        try {
+          const userData = JSON.parse(currentUserData);
+          const userEmail = userData.email || '';
+          const userName = userEmail.split('@')[0] || 'User';
+          
+          // Find current user in the full list
+          currentUserStudent = transformedStudents.find(student => 
+            student.name.toLowerCase().includes(userName.toLowerCase()) ||
+            student.name.toLowerCase().includes(userEmail.toLowerCase())
+          ) || null;
+          
+          // If current user is not in top 10, show them separately
+          if (currentUserStudent && !top10Students.find(student => student.id === currentUserStudent!.id)) {
+            // Keep current user data but don't add to top 10
+          } else if (currentUserStudent && top10Students.find(student => student.id === currentUserStudent!.id)) {
+            // Current user is in top 10, don't show separately
+            currentUserStudent = null;
+          }
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+        }
+      }
+      
+      console.log('Top 10 students:', top10Students);
+      console.log('Current user:', currentUserStudent);
       console.log('Total students:', totalStudents);
-      setStudents(transformedStudents);
+      setStudents(top10Students);
+      setCurrentUser(currentUserStudent);
     } catch (e: any) {
       console.error('Error loading leaderboard:', e);
       setError(e?.response?.data?.message || 'Failed to load leaderboard');
@@ -311,6 +346,57 @@ export default function Leaderboard({ onNavigate, courseId, activeTab = 'ranking
                   );
                 })}
               </div>
+
+              {/* Current User Row (if not in top 10) */}
+              {currentUser && (
+                <div className="mt-4">
+                  <div className="bg-white/5 hover:bg-white/10 backdrop-blur-sm rounded-lg sm:rounded-xl border border-white/10 p-2 sm:p-4 transition-all duration-300 hover:shadow-lg hover:scale-[1.02] hover:border-white/20">
+                    {/* Mobile Layout */}
+                    <div className="md:hidden grid grid-cols-5 items-center gap-1 sm:gap-2">
+                      <div className="flex items-center gap-1">
+                        <div className="flex items-center justify-center w-4 h-4 sm:w-5 sm:h-5 bg-blue-500 rounded-full">
+                          <span className="text-white text-[8px] sm:text-[10px] font-bold">#{currentUser.rank}</span>
+                        </div>
+                        <h3 className="font-semibold text-white text-[10px] sm:text-xs break-words leading-tight">{currentUser.name}</h3>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-[10px] sm:text-xs">{currentUser.pointsThisMonth}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-[10px] sm:text-xs">{currentUser.totalPoints.toLocaleString()}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-[10px] sm:text-xs">{currentUser.rewardsUnlocked}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-[10px] sm:text-xs">${currentUser.rewardsValue}</span>
+                      </div>
+                    </div>
+
+                    {/* Desktop Layout */}
+                    <div className="hidden md:grid md:grid-cols-5 items-center gap-3 sm:gap-4">
+                      <div className="flex items-center gap-2 sm:gap-3">
+                        <div className="flex items-center justify-center w-6 h-6 sm:w-8 sm:h-8 bg-blue-500 rounded-full">
+                          <span className="text-white text-xs sm:text-sm font-bold">#{currentUser.rank}</span>
+                        </div>
+                        <h3 className="font-semibold text-white text-sm sm:text-base">{currentUser.name}</h3>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-sm sm:text-base">{currentUser.pointsThisMonth}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-sm sm:text-base">{currentUser.totalPoints.toLocaleString()}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-sm sm:text-base">{currentUser.rewardsUnlocked}</span>
+                      </div>
+                      <div className="text-center">
+                        <span className="font-semibold text-white text-sm sm:text-base">${currentUser.rewardsValue}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
